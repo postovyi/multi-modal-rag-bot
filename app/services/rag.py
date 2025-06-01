@@ -25,7 +25,7 @@ class RAGService:
         self.builder.add_node(self.reply_node.__name__, self.reply_node)
         self.builder.add_edge(START, self.reply_node.__name__)
         self.builder.add_edge(self.reply_node.__name__, END)
-        self.config = {'configurable': {'thread_id': 'test_conversation'}}  # Will update this logic
+        self.config = {'configurable': {'thread_id': 'test_conversation'}}
         self.memory = MemorySaver()
         self.workflow = self.builder.compile(checkpointer=self.memory)
         self.docs = []
@@ -64,7 +64,6 @@ class RAGService:
 
     @traceable
     async def reply_node(self, state: RAGState) -> dict[str, Any]:
-        loguru.logger.info(state['messages'])
         question = await self.create_rag_request(state['messages'])
         relevant_docs = await self.get_retriever().ainvoke(question)
         response = await self.llm.ainvoke(

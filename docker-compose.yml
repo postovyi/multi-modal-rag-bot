@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  chroma:
+    image: ghcr.io/chroma-core/chroma:latest
+    container_name: chroma
+    command: ["run", "--host", "0.0.0.0", "--port", "6379"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - chroma_data:/chroma/.chroma/index
+    environment:
+      - IS_PERSISTENT=TRUE
+      - CHROMA_SERVER_HTTP_PORT=6379
+    networks:
+      - app-net
+
+  app:
+    build: .
+    restart: always
+    container_name: rag-app
+    depends_on:
+      - chroma
+    environment:
+      - CHROMA_DB_HOST=chroma
+      - CHROMA_DB_PORT=6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
+      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT}
+      - LANGCHAIN_TRACING_V2=true
+    ports:
+      - "8000:8000"
+    networks:
+      - app-net
+
+  streamlit:
+    build: .
+    container_name: streamlit-app
+    depends_on:
+      - app
+    environment:
+      - CHROMA_DB_HOST=chroma
+      - CHROMA_DB_PORT=6379
+    ports:
+      - "8501:8501"
+    command: python -m streamlit run app/streamlit_app.py --server.port 8501 --server.address 0.0.0.0
+    networks:
+      - app-net
+
+volumes:
+  chroma_data:
+    driver: local
+
+networks:
+  app-net:
+    driver: bridge 
